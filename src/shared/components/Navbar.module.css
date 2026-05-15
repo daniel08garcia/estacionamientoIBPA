@@ -1,134 +1,56 @@
-/* ============================================================
-   Navbar - CSS Module
-   ============================================================ */
-
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+  background: linear-gradient(120deg, rgba(12, 18, 36, 0.94), rgba(19, 24, 44, 0.86));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
 }
 
 .inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 900px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 0 1.25rem;
-  height: 64px;
+  padding: 0 1rem;
+  height: 68px;
 }
 
-/* ── Brand ── */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.brandIcon {
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
+.brand { display: flex; align-items: center; gap: .55rem; text-decoration: none; }
+.brandIcon { font-size: 1.35rem; }
 .brandName {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  color: var(--color-primary);
-  letter-spacing: 0.04em;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #42d774, #d96226);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* ── Nav ── */
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
+.nav { display: flex; gap: .35rem; background: rgba(255,255,255,.06); border-radius: 999px; padding: .25rem; }
 .navLink {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 8px;
+  gap: .4rem;
+  color: #d1d5db;
   text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  transition: background 0.15s, color 0.15s;
-  white-space: nowrap;
+  padding: .55rem .82rem;
+  border-radius: 999px;
+  font-size: .85rem;
+  transition: all .2s ease;
 }
-
-.navLink:hover {
-  background: var(--color-nav-hover);
-  color: var(--color-text);
-}
-
+.navLink:hover { color: #fff; transform: translateY(-1px); }
 .navLinkActive {
-  background: rgba(99, 102, 241, 0.12);
-  color: var(--color-primary);
-  font-weight: 700;
+  background: linear-gradient(120deg, #6633cc, #b23488);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(102, 51, 204, 0.38);
 }
+.navIcon { font-size: 1rem; }
 
-.navIcon {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.navLabel {
-  display: inline;
-}
-
-/* ── Mobile: horizontal scrollable nav bar at top ── */
-@media (max-width: 640px) {
-  .inner {
-    flex-direction: column;
-    height: auto;
-    padding: 0.5rem 0 0;
-    align-items: stretch;
-    gap: 0;
-  }
-
-  .brand {
-    padding: 0.35rem 1rem 0.35rem;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .nav {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 0;
-    padding: 0 0.25rem;
-  }
-
-  .nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .navLink {
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.55rem 1rem;
-    font-size: 0.72rem;
-    border-radius: 0;
-    flex: 1;
-    justify-content: center;
-    min-width: 80px;
-  }
-
-  .navLinkActive {
-    border-bottom: 2.5px solid var(--color-primary);
-    background: transparent;
-  }
-
-  .navIcon {
-    font-size: 1.3rem;
-  }
+@media (max-width: 740px) {
+  .inner { flex-direction: column; height: auto; padding: .5rem .6rem .6rem; gap: .5rem; }
+  .nav { width: 100%; overflow-x: auto; justify-content: space-between; }
+  .navLink { justify-content: center; min-width: 110px; flex: 1; }
 }
