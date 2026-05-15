@@ -24,6 +24,7 @@ La aplicación incluye tres secciones:
 ### Generar QR
 
 - Captura: nombre, teléfono (10 dígitos), placa y país.
+- Regla de validación: el número local debe tener 10 dígitos tanto para México (`+52`) como para Estados Unidos (`+1`).
 - Selector de país tipo toggle:
   - México: `+52`
   - Estados Unidos: `+1`
@@ -75,8 +76,6 @@ Ejemplo:
 - Tamaño inicial: **2 x 3 pulgadas** (configurable).
 - Vista previa previa a imprimir.
 - Estilos de impresión con `@media print`.
-
-## Requerimientos técnicos principales
 
 ## Stack sugerido
 
