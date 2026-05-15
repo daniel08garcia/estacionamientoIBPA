@@ -23,8 +23,11 @@ La aplicación incluye tres secciones:
 
 ### Generar QR
 
-- Captura: nombre, teléfono (10 dígitos), placa y país.
-- Regla de validación: el número local debe tener 10 dígitos tanto para México (`+52`) como para Estados Unidos (`+1`).
+- Captura: nombre, teléfono local (10 dígitos), placa y país.
+- Regla de validación: se validan 10 dígitos del número local (sin prefijo internacional) tanto para México (`+52`) como para Estados Unidos (`+1`).
+- Resultado final esperado tras concatenar prefijo:
+  - MX: `+52` + 10 dígitos
+  - US: `+1` + 10 dígitos
 - Selector de país tipo toggle:
   - México: `+52`
   - Estados Unidos: `+1`
