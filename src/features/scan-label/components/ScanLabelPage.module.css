@@ -62,6 +62,15 @@
 .error { color: #dc2626; margin: 0; }
 .info { color: var(--color-text-muted); margin: 0; }
 
+.preview {
+  width: 100%;
+  max-height: 280px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  object-fit: cover;
+  background: #0f172a;
+}
+
 .resultCard h2 { margin-top: 0; }
 .pending { color: var(--color-text-muted); }
 .contactList { display: grid; gap: 1rem; }

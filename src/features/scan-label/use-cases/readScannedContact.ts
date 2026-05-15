@@ -1,18 +1,60 @@
 import { AppError } from '../../../shared/errors/AppError';
+import { loadEncryptionKey } from '../../settings/use-cases/loadEncryptionKey';
 
 export type ScannedContact = {
   nombre: string;
   telefono: string;
 };
 
-function decodeBase64Url(value: string): string {
+const QR_VERSION_PREFIX = 'v1.';
+const SALT_BYTES = 16;
+const IV_BYTES = 12;
+const PBKDF2_ITERATIONS = 210_000;
+
+function decodeBase64UrlToBytes(value: string): Uint8Array {
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
   const normalized = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
 
   try {
-    return decodeURIComponent(escape(atob(normalized)));
+    const decoded = atob(normalized);
+    return Uint8Array.from(decoded, (char) => char.charCodeAt(0));
   } catch {
     throw new AppError('INVALID_QR_PAYLOAD', 'El QR leído no tiene un formato válido.');
+  }
+}
+
+function decodeUtf8(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder().decode(bytes);
+  } catch {
+    throw new AppError('INVALID_QR_PAYLOAD', 'No fue posible decodificar el contenido del QR.');
+  }
+}
+
+async function decryptPayload(rawPayload: string, password: string): Promise<string> {
+  const payloadBytes = decodeBase64UrlToBytes(rawPayload);
+  if (payloadBytes.length <= SALT_BYTES + IV_BYTES) {
+    throw new AppError('INVALID_QR_PAYLOAD', 'El payload del QR está incompleto o corrupto.');
+  }
+
+  const salt = payloadBytes.slice(0, SALT_BYTES);
+  const iv = payloadBytes.slice(SALT_BYTES, SALT_BYTES + IV_BYTES);
+  const ciphertext = payloadBytes.slice(SALT_BYTES + IV_BYTES);
+
+  try {
+    const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITERATIONS },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt'],
+    );
+
+    const plainBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+    return decodeUtf8(new Uint8Array(plainBuffer));
+  } catch {
+    throw new AppError('DECRYPTION_FAILED', 'No fue posible desencriptar. Verifica la llave en Settings.');
   }
 }
 
@@ -32,19 +74,24 @@ function parseContact(candidate: unknown): ScannedContact {
   return { nombre, telefono };
 }
 
-export function readScannedContact(rawQrValue: string): ScannedContact {
+export async function readScannedContact(rawQrValue: string): Promise<ScannedContact> {
   const value = rawQrValue.trim();
 
   if (!value) {
     throw new AppError('INVALID_QR_PAYLOAD', 'Primero debes escanear o pegar el contenido del QR.');
   }
 
-  if (!value.startsWith('v1.')) {
+  if (!value.startsWith(QR_VERSION_PREFIX)) {
     throw new AppError('INVALID_QR_PAYLOAD', 'El QR leído usa una versión no compatible.');
   }
 
-  const payload = value.slice(3);
-  const json = decodeBase64Url(payload);
+  const payload = value.slice(QR_VERSION_PREFIX.length);
+  const key = await loadEncryptionKey();
+  if (!key) {
+    throw new AppError('KEY_NOT_FOUND', 'No hay llave configurada. Define una en Settings.');
+  }
+
+  const json = await decryptPayload(payload, key);
 
   try {
     const parsed = JSON.parse(json) as unknown;
