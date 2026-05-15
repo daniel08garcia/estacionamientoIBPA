@@ -1,30 +1,42 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppError } from '../../../shared/errors/AppError';
 import { formatPhoneLabel, readScannedContact, type ScannedContact } from '../use-cases/readScannedContact';
 import styles from './ScanLabelPage.module.css';
 
 type ReadStatus = 'idle' | 'error' | 'success';
 
-const DEMO_PAYLOAD = 'v1.eyJub21icmUiOiJKdWFuIFDDqXJleiIsInRlbGVmb25vIjoiKzUyNjY0MTIzNDU2NyJ9';
+type BarcodeDetectorLike = {
+  new (options?: { formats?: string[] }): DetectorWithFormats;
+};
+
+type DetectorWithFormats = {
+  detect(source: ImageBitmapSource): Promise<Array<{ rawValue?: string }>>;
+};
 
 export function ScanLabelPage() {
   const [rawValue, setRawValue] = useState('');
   const [status, setStatus] = useState<ReadStatus>('idle');
   const [message, setMessage] = useState('');
   const [contact, setContact] = useState<ScannedContact | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scanRafRef = useRef<number | null>(null);
 
   const formattedPhone = useMemo(
     () => (contact ? formatPhoneLabel(contact.telefono) : ''),
     [contact],
   );
 
-  const handleRead = () => {
+  const handleRead = async (candidate?: string) => {
     setStatus('idle');
     setMessage('');
     setContact(null);
+    setIsReading(true);
 
     try {
-      const parsedContact = readScannedContact(rawValue);
+      const parsedContact = await readScannedContact(candidate ?? rawValue);
       setContact(parsedContact);
       setStatus('success');
     } catch (error) {
@@ -34,8 +46,68 @@ export function ScanLabelPage() {
       } else {
         setMessage('No fue posible leer el código QR. Intenta nuevamente.');
       }
+    } finally {
+      setIsReading(false);
     }
   };
+
+  const stopCamera = () => {
+    if (scanRafRef.current) {
+      cancelAnimationFrame(scanRafRef.current);
+      scanRafRef.current = null;
+    }
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+    setIsCameraActive(false);
+  };
+
+  const startCamera = async () => {
+    if (!('BarcodeDetector' in window)) {
+      setStatus('error');
+      setMessage('Tu navegador no soporta lectura QR por cámara (BarcodeDetector).');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      mediaStreamRef.current = stream;
+
+      if (!videoRef.current) return;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      setIsCameraActive(true);
+
+      const detectorFactory = (window as Window & { BarcodeDetector: BarcodeDetectorLike }).BarcodeDetector;
+      const detector = new detectorFactory({ formats: ['qr_code'] });
+      const scan = async () => {
+        if (!videoRef.current) return;
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          const qrValue = barcodes.find((item: { rawValue?: string }) => item.rawValue)?.rawValue?.trim();
+          if (qrValue) {
+            setRawValue(qrValue);
+            await handleRead(qrValue);
+            stopCamera();
+            return;
+          }
+        } catch {
+          setStatus('error');
+          setMessage('No se pudo procesar la imagen de la cámara.');
+          stopCamera();
+          return;
+        }
+        scanRafRef.current = requestAnimationFrame(() => { void scan(); });
+      };
+
+      scanRafRef.current = requestAnimationFrame(() => { void scan(); });
+    } catch {
+      setStatus('error');
+      setMessage('Permiso de cámara denegado o cámara no disponible.');
+      stopCamera();
+    }
+  };
+
+  useEffect(() => () => stopCamera(), []);
 
   return (
     <main className={styles.page}>
@@ -69,21 +141,28 @@ export function ScanLabelPage() {
             />
 
             <div className={styles.actions}>
-              <button type="button" className={styles.primaryBtn} onClick={handleRead}>
-                Leer información
+              <button type="button" className={styles.primaryBtn} onClick={() => { void handleRead(); }}>
+                {isReading ? 'Leyendo...' : 'Leer información'}
               </button>
               <button
                 type="button"
                 className={styles.secondaryBtn}
                 onClick={() => {
-                  setRawValue(DEMO_PAYLOAD);
-                  setStatus('idle');
-                  setMessage('Demo cargada. Presiona "Leer información".');
+                  if (isCameraActive) {
+                    stopCamera();
+                    setMessage('Cámara detenida.');
+                    return;
+                  }
+                  void startCamera();
                 }}
               >
-                Cargar demo
+                {isCameraActive ? 'Detener cámara' : 'Abrir cámara'}
               </button>
             </div>
+
+            {isCameraActive && (
+              <video ref={videoRef} className={styles.preview} muted playsInline aria-label="Vista previa de cámara" />
+            )}
 
             {message && (
               <p className={status === 'error' ? styles.error : styles.info} role="status">
