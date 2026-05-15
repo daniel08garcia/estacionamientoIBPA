@@ -1,0 +1,134 @@
+/* ============================================================
+   Navbar - CSS Module
+   ============================================================ */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  height: 64px;
+}
+
+/* ── Brand ── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.brandIcon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.brandName {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 0.04em;
+}
+
+/* ── Nav ── */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  background: var(--color-nav-hover);
+  color: var(--color-text);
+}
+
+.navLinkActive {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.navIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.navLabel {
+  display: inline;
+}
+
+/* ── Mobile: horizontal scrollable nav bar at top ── */
+@media (max-width: 640px) {
+  .inner {
+    flex-direction: column;
+    height: auto;
+    padding: 0.5rem 0 0;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .brand {
+    padding: 0.35rem 1rem 0.35rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+    padding: 0 0.25rem;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navLink {
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.72rem;
+    border-radius: 0;
+    flex: 1;
+    justify-content: center;
+    min-width: 80px;
+  }
+
+  .navLinkActive {
+    border-bottom: 2.5px solid var(--color-primary);
+    background: transparent;
+  }
+
+  .navIcon {
+    font-size: 1.3rem;
+  }
+}
