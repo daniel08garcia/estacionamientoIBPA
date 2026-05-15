@@ -3,11 +3,11 @@
    ============================================================ */
 :root {
   /* Palette */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
+  --color-primary: #6633cc;
+  --color-primary-hover: #b23488;
   --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  --color-success: #42d774;
+  --color-warning: #d96226;
 
   /* Surface */
   --color-bg: #f8fafc;
