@@ -150,61 +150,58 @@ export function GenerateLabelPage() {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, W, H);
 
-      // Layout constants
-      const margin = 24;
-      const qrSize = H - margin * 2; // 552 px – fills the full height with margin
-      const qrX = margin;
-      const qrY = margin;
+      // Professional monochrome layout: QR on the left and plate text vertical on the right.
+      const margin = 18;
+      const textStripWidth = Math.max(Math.round(W * 0.16), 120);
+      const gutter = 12;
+      const qrAreaWidth = W - margin * 2 - textStripWidth - gutter;
+      const qrSize = Math.min(H - margin * 2, qrAreaWidth);
+      const qrX = margin + Math.round((qrAreaWidth - qrSize) / 2);
+      const qrY = Math.round((H - qrSize) / 2);
 
-      // QR code
+      // QR code with high contrast, no background fills.
       ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-      // Vertical separator
-      const sepX = qrX + qrSize + margin;
-      ctx.strokeStyle = "#bbbbbb";
-      ctx.lineWidth = 1;
+      // Divider line between QR and plate strip.
+      const dividerX = qrX + qrSize + Math.round(gutter / 2);
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(sepX, margin * 2);
-      ctx.lineTo(sepX, H - margin * 2);
+      ctx.moveTo(dividerX, margin);
+      ctx.lineTo(dividerX, H - margin);
       ctx.stroke();
 
-      // Text area geometry
-      const textAreaLeft = sepX + margin;
-      const textAreaRight = W - margin;
-      const textAreaW = textAreaRight - textAreaLeft;
-      const textCenterX = textAreaLeft + textAreaW / 2;
+      // Vertical plate text fitted to available space.
+      const plateText = (placa || "SIN-PLACA").trim().toUpperCase();
+      const textMaxLength = H - margin * 2 - 12;
+      let plateFontSize = Math.round(textStripWidth * 0.58);
 
+      ctx.font = `900 ${plateFontSize}px Arial, Helvetica, sans-serif`;
+      while (
+        ctx.measureText(plateText).width > textMaxLength &&
+        plateFontSize > 30
+      ) {
+        plateFontSize -= 2;
+        ctx.font = `900 ${plateFontSize}px Arial, Helvetica, sans-serif`;
+      }
+
+      const textStripLeft = W - margin - textStripWidth;
+      const textCenterX = textStripLeft + textStripWidth / 2;
+      const textCenterY = H / 2;
+
+      ctx.save();
+      ctx.translate(textCenterX, textCenterY);
+      ctx.rotate(-Math.PI / 2);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-
-      // "PLACA" caption
-      const captionFontSize = Math.round(H * 0.07);
-      ctx.font = `600 ${captionFontSize}px Arial, Helvetica, sans-serif`;
-      ctx.fillStyle = "#777777";
-      ctx.fillText("PLACA", textCenterX, H * 0.3);
-
-      // Thin rule under caption
-      const ruleY = H * 0.38;
-      ctx.strokeStyle = "#cccccc";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(textAreaLeft, ruleY);
-      ctx.lineTo(textAreaRight, ruleY);
-      ctx.stroke();
-
-      // Plate value – largest font that fits the text area
-      const plateFontSize = Math.min(
-        Math.round(H * 0.22),
-        Math.round(textAreaW * 0.9),
-      );
-      ctx.font = `900 ${plateFontSize}px Arial, Helvetica, sans-serif`;
       ctx.fillStyle = "#000000";
-      ctx.fillText(placa, textCenterX, H * 0.6, textAreaW);
+      ctx.fillText(plateText, 0, 0, textMaxLength);
+      ctx.restore();
 
-      // Outer border
+      // Outer frame.
       ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(2, 2, W - 4, H - 4);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
 
       // Export label as PNG automatically on click.
       const safePlate = (placa || "sin-placa")
