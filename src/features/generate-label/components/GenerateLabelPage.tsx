@@ -4,6 +4,11 @@ import { createCompactEncryptedQrValue } from "../../../infrastructure/crypto/we
 import { loadEncryptionKey } from "../../settings/use-cases/loadEncryptionKey";
 import styles from "./PlaceholderPage.module.css";
 
+const LABEL_DPI = 300;
+const LABEL_WIDTH_IN = 3;
+const LABEL_HEIGHT_IN = 2;
+const QR_IMAGE_SIZE = 260;
+
 type CountryCode = "+52" | "+1";
 
 export function GenerateLabelPage() {
@@ -52,8 +57,7 @@ export function GenerateLabelPage() {
     };
   }, [generated, qrValue]);
 
-  const handleGenerate = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const generateEncryptedQr = async () => {
     setMessage("");
     setMessageKind("idle");
     setGenerated(false);
@@ -64,7 +68,7 @@ export function GenerateLabelPage() {
       setMessage("Completa placa y un teléfono válido de 10 dígitos.");
       setMessageKind("error");
       setGenerated(false);
-      return;
+      return null;
     }
 
     try {
@@ -84,11 +88,15 @@ export function GenerateLabelPage() {
         contactPayload,
         encryptionKey,
       );
+      const encoded = encodeURIComponent(encryptedQrValue);
+      const generatedQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${QR_IMAGE_SIZE}x${QR_IMAGE_SIZE}&format=png&data=${encoded}`;
 
       setQrValue(encryptedQrValue);
+      setQrSrc(generatedQrSrc);
       setGenerated(true);
       setMessage("QR encriptado generado correctamente.");
       setMessageKind("success");
+      return { qrValue: encryptedQrValue, qrSrc: generatedQrSrc };
     } catch (error) {
       setGenerated(false);
       if (error instanceof AppError) {
@@ -96,6 +104,139 @@ export function GenerateLabelPage() {
       } else {
         setMessage("No fue posible generar el QR encriptado.");
       }
+      setMessageKind("error");
+      return null;
+    }
+  };
+
+  const handleGenerate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await generateEncryptedQr();
+  };
+
+  const handlePrint = async () => {
+    let printableQrSrc = qrSrc;
+    if (!generated || !printableQrSrc) {
+      const generatedData = await generateEncryptedQr();
+      if (!generatedData) return;
+      printableQrSrc = generatedData.qrSrc;
+    }
+
+    const W = Math.round(LABEL_WIDTH_IN * LABEL_DPI); // 900 px
+    const H = Math.round(LABEL_HEIGHT_IN * LABEL_DPI); // 600 px
+
+    try {
+      // Fetch QR image as blob to allow drawing on canvas (avoids CORS taint)
+      const response = await fetch(printableQrSrc);
+      if (!response.ok) throw new Error("fetch_qr");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const qrImg = new Image();
+      qrImg.src = objectUrl;
+      await new Promise<void>((resolve, reject) => {
+        qrImg.onload = () => resolve();
+        qrImg.onerror = () => reject(new Error("img_load"));
+      });
+      URL.revokeObjectURL(objectUrl);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("no_ctx");
+
+      // White background (thermal printing = black on white)
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // Layout constants
+      const margin = 24;
+      const qrSize = H - margin * 2; // 552 px – fills the full height with margin
+      const qrX = margin;
+      const qrY = margin;
+
+      // QR code
+      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+      // Vertical separator
+      const sepX = qrX + qrSize + margin;
+      ctx.strokeStyle = "#bbbbbb";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sepX, margin * 2);
+      ctx.lineTo(sepX, H - margin * 2);
+      ctx.stroke();
+
+      // Text area geometry
+      const textAreaLeft = sepX + margin;
+      const textAreaRight = W - margin;
+      const textAreaW = textAreaRight - textAreaLeft;
+      const textCenterX = textAreaLeft + textAreaW / 2;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // "PLACA" caption
+      const captionFontSize = Math.round(H * 0.07);
+      ctx.font = `600 ${captionFontSize}px Arial, Helvetica, sans-serif`;
+      ctx.fillStyle = "#777777";
+      ctx.fillText("PLACA", textCenterX, H * 0.3);
+
+      // Thin rule under caption
+      const ruleY = H * 0.38;
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(textAreaLeft, ruleY);
+      ctx.lineTo(textAreaRight, ruleY);
+      ctx.stroke();
+
+      // Plate value – largest font that fits the text area
+      const plateFontSize = Math.min(
+        Math.round(H * 0.22),
+        Math.round(textAreaW * 0.9),
+      );
+      ctx.font = `900 ${plateFontSize}px Arial, Helvetica, sans-serif`;
+      ctx.fillStyle = "#000000";
+      ctx.fillText(placa, textCenterX, H * 0.6, textAreaW);
+
+      // Outer border
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2, 2, W - 4, H - 4);
+
+      // Export label as PNG automatically on click.
+      const safePlate = (placa || "sin-placa")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^A-Z0-9-_]/gi, "")
+        .slice(0, 24);
+      const fileName = `etiqueta-${safePlate || "sin-placa"}.png`;
+
+      const labelBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((result) => resolve(result), "image/png");
+      });
+
+      if (labelBlob) {
+        const downloadUrl = URL.createObjectURL(labelBlob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
+      } else {
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = fileName;
+        a.click();
+      }
+
+      setMessage("Etiqueta exportada correctamente.");
+      setMessageKind("success");
+    } catch {
+      setMessage("No fue posible generar la imagen de impresión.");
       setMessageKind("error");
     }
   };
@@ -108,11 +249,7 @@ export function GenerateLabelPage() {
           <header className={styles.header}>
             <p className={styles.kicker}>IBPA · Contact Label</p>
             <h1>Generar QR</h1>
-            <p>
-              Captura nombre, teléfono y placa para construir la etiqueta. El QR
-              se prepara con información de contacto y la placa queda visible en
-              texto plano.
-            </p>
+            <p>Captura nombre, teléfono y placa para construir la etiqueta.</p>
           </header>
 
           <form className={styles.form} onSubmit={handleGenerate}>
@@ -166,9 +303,18 @@ export function GenerateLabelPage() {
             </label>
 
             <div className={styles.actions}>
-              <button className={styles.generateBtn} type="submit">
-                Generar vista previa
-              </button>
+              <div className={styles.actionButtons}>
+                <button className={styles.generateBtn} type="submit">
+                  Generar vista previa
+                </button>
+                <button
+                  type="button"
+                  className={styles.printBtn}
+                  onClick={handlePrint}
+                >
+                  Imprimir etiqueta
+                </button>
+              </div>
               <p className={styles.helper}>
                 Teléfono final: <strong>{fullPhone}</strong>
               </p>

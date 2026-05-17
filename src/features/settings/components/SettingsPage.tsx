@@ -1,30 +1,30 @@
-import { useEffect, useState } from 'react';
-import { loadEncryptionKey } from '../use-cases/loadEncryptionKey';
-import { saveEncryptionKey } from '../use-cases/saveEncryptionKey';
-import { updateEncryptionKey } from '../use-cases/updateEncryptionKey';
-import { AppError } from '../../../shared/errors/AppError';
-import styles from './SettingsPage.module.css';
+import { useEffect, useState } from "react";
+import { loadEncryptionKey } from "../use-cases/loadEncryptionKey";
+import { saveEncryptionKey } from "../use-cases/saveEncryptionKey";
+import { updateEncryptionKey } from "../use-cases/updateEncryptionKey";
+import { AppError } from "../../../shared/errors/AppError";
+import styles from "./SettingsPage.module.css";
 
-type Status = 'idle' | 'loading' | 'success' | 'error';
+type Status = "idle" | "loading" | "success" | "error";
 
 export function SettingsPage() {
-  const [keyValue, setKeyValue] = useState('');
-  const [confirmValue, setConfirmValue] = useState('');
+  const [keyValue, setKeyValue] = useState("");
+  const [confirmValue, setConfirmValue] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [hasExistingKey, setHasExistingKey] = useState(false);
-  const [status, setStatus] = useState<Status>('idle');
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState<Status>("idle");
+  const [message, setMessage] = useState("");
   const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     const fetchKey = async () => {
-      setStatus('loading');
+      setStatus("loading");
       try {
         const stored = await loadEncryptionKey();
         setHasExistingKey(stored !== null);
-        setStatus('idle');
+        setStatus("idle");
       } catch {
-        setStatus('idle');
+        setStatus("idle");
       }
     };
     fetchKey();
@@ -49,8 +49,8 @@ export function SettingsPage() {
   };
 
   const persistKey = async () => {
-    setStatus('loading');
-    setMessage('');
+    setStatus("loading");
+    setMessage("");
     try {
       if (hasExistingKey) {
         await updateEncryptionKey(keyValue);
@@ -58,21 +58,21 @@ export function SettingsPage() {
         await saveEncryptionKey(keyValue);
       }
       setHasExistingKey(true);
-      setKeyValue('');
-      setConfirmValue('');
+      setKeyValue("");
+      setConfirmValue("");
       setShowWarning(false);
-      setStatus('success');
+      setStatus("success");
       setMessage(
         hasExistingKey
-          ? 'Llave actualizada correctamente. Las etiquetas generadas con la llave anterior ya no podrán leerse.'
-          : 'Llave guardada correctamente.',
+          ? "Llave actualizada correctamente. Las etiquetas generadas con la llave anterior ya no podrán leerse."
+          : "Llave guardada correctamente.",
       );
     } catch (err) {
-      setStatus('error');
+      setStatus("error");
       if (err instanceof AppError) {
         setMessage(err.message);
       } else {
-        setMessage('Ocurrió un error al guardar la llave. Inténtalo de nuevo.');
+        setMessage("Ocurrió un error al guardar la llave. Inténtalo de nuevo.");
       }
     }
   };
@@ -85,13 +85,15 @@ export function SettingsPage() {
     <main className={styles.page}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon} aria-hidden="true">⚙️</span>
+          <span className={styles.icon} aria-hidden="true">
+            ⚙️
+          </span>
           <h1 className={styles.title}>Configuración</h1>
         </div>
 
         <p className={styles.description}>
           Configura la llave de encriptación utilizada para generar y leer los
-          códigos QR. Esta llave se guarda localmente en tu dispositivo.
+          códigos QR.
         </p>
 
         {hasExistingKey && (
@@ -102,8 +104,14 @@ export function SettingsPage() {
         )}
 
         {!hasExistingKey && (
-          <div className={`${styles.statusBadge} ${styles.statusBadgeWarning}`} role="status">
-            <span className={`${styles.dot} ${styles.dotWarning}`} aria-hidden="true" />
+          <div
+            className={`${styles.statusBadge} ${styles.statusBadgeWarning}`}
+            role="status"
+          >
+            <span
+              className={`${styles.dot} ${styles.dotWarning}`}
+              aria-hidden="true"
+            />
             Sin llave configurada
           </div>
         )}
@@ -111,17 +119,17 @@ export function SettingsPage() {
         <form onSubmit={handleSubmit} noValidate className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="encryptionKey" className={styles.label}>
-              {hasExistingKey ? 'Nueva llave' : 'Llave de encriptación'}
+              {hasExistingKey ? "Nueva llave" : "Llave de encriptación"}
             </label>
             <div className={styles.inputWrapper}>
               <input
                 id="encryptionKey"
-                type={showKey ? 'text' : 'password'}
+                type={showKey ? "text" : "password"}
                 value={keyValue}
                 onChange={(e) => {
                   setKeyValue(e.target.value);
-                  setStatus('idle');
-                  setMessage('');
+                  setStatus("idle");
+                  setMessage("");
                   setShowWarning(false);
                 }}
                 placeholder="Mínimo 8 caracteres"
@@ -135,9 +143,9 @@ export function SettingsPage() {
                 type="button"
                 className={styles.toggleVisibility}
                 onClick={() => setShowKey((v) => !v)}
-                aria-label={showKey ? 'Ocultar llave' : 'Mostrar llave'}
+                aria-label={showKey ? "Ocultar llave" : "Mostrar llave"}
               >
-                {showKey ? '🙈' : '👁️'}
+                {showKey ? "🙈" : "👁️"}
               </button>
             </div>
             <p id="keyHelp" className={styles.hint}>
@@ -152,17 +160,19 @@ export function SettingsPage() {
             <div className={styles.inputWrapper}>
               <input
                 id="confirmKey"
-                type={showKey ? 'text' : 'password'}
+                type={showKey ? "text" : "password"}
                 value={confirmValue}
                 onChange={(e) => {
                   setConfirmValue(e.target.value);
-                  setStatus('idle');
-                  setMessage('');
+                  setStatus("idle");
+                  setMessage("");
                   setShowWarning(false);
                 }}
                 placeholder="Repite la llave"
                 className={`${styles.input} ${
-                  confirmValue && keyValue !== confirmValue ? styles.inputError : ''
+                  confirmValue && keyValue !== confirmValue
+                    ? styles.inputError
+                    : ""
                 }`}
                 autoComplete="new-password"
                 minLength={8}
@@ -181,9 +191,9 @@ export function SettingsPage() {
               <strong>⚠️ Advertencia</strong>
               <p>
                 Estás a punto de cambiar la llave de encriptación. Los códigos
-                QR generados con la llave anterior <strong>dejarán de funcionar</strong>.
-                Se recomienda reimprimir todas las etiquetas existentes con la
-                nueva llave.
+                QR generados con la llave anterior{" "}
+                <strong>dejarán de funcionar</strong>. Se recomienda reimprimir
+                todas las etiquetas existentes con la nueva llave.
               </p>
               <div className={styles.warningActions}>
                 <button
@@ -197,21 +207,23 @@ export function SettingsPage() {
                   type="button"
                   onClick={persistKey}
                   className={`${styles.btn} ${styles.btnDanger}`}
-                  disabled={status === 'loading'}
+                  disabled={status === "loading"}
                 >
-                  {status === 'loading' ? 'Guardando…' : 'Actualizar de todas formas'}
+                  {status === "loading"
+                    ? "Guardando…"
+                    : "Actualizar de todas formas"}
                 </button>
               </div>
             </div>
           )}
 
-          {status === 'success' && (
+          {status === "success" && (
             <div className={styles.successBox} role="status">
               ✅ {message}
             </div>
           )}
 
-          {status === 'error' && (
+          {status === "error" && (
             <div className={styles.errorBox} role="alert">
               ❌ {message}
             </div>
@@ -221,25 +233,27 @@ export function SettingsPage() {
             <button
               type="submit"
               className={styles.btn}
-              disabled={!isFormValid || status === 'loading'}
+              disabled={!isFormValid || status === "loading"}
             >
-              {status === 'loading'
-                ? 'Guardando…'
+              {status === "loading"
+                ? "Guardando…"
                 : hasExistingKey
-                  ? 'Actualizar llave'
-                  : 'Guardar llave'}
+                  ? "Actualizar llave"
+                  : "Guardar llave"}
             </button>
           )}
         </form>
 
-        <section className={styles.infoSection} aria-label="Información de seguridad">
+        <section
+          className={styles.infoSection}
+          aria-label="Información de seguridad"
+        >
           <h2 className={styles.infoTitle}>ℹ️ Información importante</h2>
           <ul className={styles.infoList}>
-            <li>La llave se almacena localmente en tu dispositivo (IndexedDB + LocalStorage).</li>
             <li>La llave no se envía a ningún servidor externo.</li>
-            <li>Quien tenga acceso físico al dispositivo podría acceder a la llave.</li>
-            <li>Cambiar la llave invalidará todos los QR generados anteriormente.</li>
-            <li>Guarda tu llave en un lugar seguro.</li>
+            <li>
+              Cambiar la llave invalidará todos los QR generados anteriormente.
+            </li>
           </ul>
         </section>
       </div>
