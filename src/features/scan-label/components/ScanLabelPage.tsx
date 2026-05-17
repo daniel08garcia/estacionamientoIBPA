@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppError } from '../../../shared/errors/AppError';
-import { formatPhoneLabel, readScannedContact, type ScannedContact } from '../use-cases/readScannedContact';
-import styles from './ScanLabelPage.module.css';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppError } from "../../../shared/errors/AppError";
+import {
+  formatPhoneLabel,
+  readScannedContact,
+  type ScannedContact,
+} from "../use-cases/readScannedContact";
+import styles from "./ScanLabelPage.module.css";
 
-type ReadStatus = 'idle' | 'error' | 'success';
+type ReadStatus = "idle" | "error" | "success";
 
 type BarcodeDetectorLike = {
   new (options?: { formats?: string[] }): DetectorWithFormats;
@@ -14,9 +18,9 @@ type DetectorWithFormats = {
 };
 
 export function ScanLabelPage() {
-  const [rawValue, setRawValue] = useState('');
-  const [status, setStatus] = useState<ReadStatus>('idle');
-  const [message, setMessage] = useState('');
+  const [rawValue, setRawValue] = useState("");
+  const [status, setStatus] = useState<ReadStatus>("idle");
+  const [message, setMessage] = useState("");
   const [contact, setContact] = useState<ScannedContact | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isReading, setIsReading] = useState(false);
@@ -25,26 +29,26 @@ export function ScanLabelPage() {
   const scanRafRef = useRef<number | null>(null);
 
   const formattedPhone = useMemo(
-    () => (contact ? formatPhoneLabel(contact.telefono) : ''),
+    () => (contact ? formatPhoneLabel(contact.telefono) : ""),
     [contact],
   );
 
   const handleRead = async (candidate?: string) => {
-    setStatus('idle');
-    setMessage('');
+    setStatus("idle");
+    setMessage("");
     setContact(null);
     setIsReading(true);
 
     try {
       const parsedContact = await readScannedContact(candidate ?? rawValue);
       setContact(parsedContact);
-      setStatus('success');
+      setStatus("success");
     } catch (error) {
-      setStatus('error');
+      setStatus("error");
       if (error instanceof AppError) {
         setMessage(error.message);
       } else {
-        setMessage('No fue posible leer el código QR. Intenta nuevamente.');
+        setMessage("No fue posible leer el código QR. Intenta nuevamente.");
       }
     } finally {
       setIsReading(false);
@@ -62,14 +66,18 @@ export function ScanLabelPage() {
   };
 
   const startCamera = async () => {
-    if (!('BarcodeDetector' in window)) {
-      setStatus('error');
-      setMessage('Tu navegador no soporta lectura QR por cámara (BarcodeDetector).');
+    if (!("BarcodeDetector" in window)) {
+      setStatus("error");
+      setMessage(
+        "Tu navegador no soporta lectura QR por cámara (BarcodeDetector).",
+      );
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
       mediaStreamRef.current = stream;
 
       if (!videoRef.current) return;
@@ -77,13 +85,17 @@ export function ScanLabelPage() {
       await videoRef.current.play();
       setIsCameraActive(true);
 
-      const detectorFactory = (window as Window & { BarcodeDetector: BarcodeDetectorLike }).BarcodeDetector;
-      const detector = new detectorFactory({ formats: ['qr_code'] });
+      const detectorFactory = (
+        window as Window & { BarcodeDetector: BarcodeDetectorLike }
+      ).BarcodeDetector;
+      const detector = new detectorFactory({ formats: ["qr_code"] });
       const scan = async () => {
         if (!videoRef.current) return;
         try {
           const barcodes = await detector.detect(videoRef.current);
-          const qrValue = barcodes.find((item: { rawValue?: string }) => item.rawValue)?.rawValue?.trim();
+          const qrValue = barcodes
+            .find((item: { rawValue?: string }) => item.rawValue)
+            ?.rawValue?.trim();
           if (qrValue) {
             setRawValue(qrValue);
             await handleRead(qrValue);
@@ -91,18 +103,22 @@ export function ScanLabelPage() {
             return;
           }
         } catch {
-          setStatus('error');
-          setMessage('No se pudo procesar la imagen de la cámara.');
+          setStatus("error");
+          setMessage("No se pudo procesar la imagen de la cámara.");
           stopCamera();
           return;
         }
-        scanRafRef.current = requestAnimationFrame(() => { void scan(); });
+        scanRafRef.current = requestAnimationFrame(() => {
+          void scan();
+        });
       };
 
-      scanRafRef.current = requestAnimationFrame(() => { void scan(); });
+      scanRafRef.current = requestAnimationFrame(() => {
+        void scan();
+      });
     } catch {
-      setStatus('error');
-      setMessage('Permiso de cámara denegado o cámara no disponible.');
+      setStatus("error");
+      setMessage("Permiso de cámara denegado o cámara no disponible.");
       stopCamera();
     }
   };
@@ -134,15 +150,21 @@ export function ScanLabelPage() {
               value={rawValue}
               onChange={(event) => {
                 setRawValue(event.target.value);
-                setStatus('idle');
-                setMessage('');
+                setStatus("idle");
+                setMessage("");
               }}
               rows={4}
             />
 
             <div className={styles.actions}>
-              <button type="button" className={styles.primaryBtn} onClick={() => { void handleRead(); }}>
-                {isReading ? 'Leyendo...' : 'Leer información'}
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                onClick={() => {
+                  void handleRead();
+                }}
+              >
+                {isReading ? "Leyendo..." : "Leer información"}
               </button>
               <button
                 type="button"
@@ -150,23 +172,32 @@ export function ScanLabelPage() {
                 onClick={() => {
                   if (isCameraActive) {
                     stopCamera();
-                    setMessage('Cámara detenida.');
+                    setMessage("Cámara detenida.");
                     return;
                   }
                   void startCamera();
                 }}
               >
-                {isCameraActive ? 'Detener cámara' : 'Abrir cámara'}
+                {isCameraActive ? "Detener cámara" : "Abrir cámara"}
               </button>
             </div>
 
             {isCameraActive && (
-              <video ref={videoRef} className={styles.preview} muted playsInline aria-label="Vista previa de cámara" />
+              <video
+                ref={videoRef}
+                className={styles.preview}
+                muted
+                playsInline
+                aria-label="Vista previa de cámara"
+              />
             )}
 
             {message && (
-              <p className={status === 'error' ? styles.error : styles.info} role="status">
-                {status === 'error' ? '❌ ' : 'ℹ️ '}
+              <p
+                className={status === "error" ? styles.error : styles.info}
+                role="status"
+              >
+                {status === "error" ? "❌ " : "ℹ️ "}
                 {message}
               </p>
             )}
@@ -175,18 +206,25 @@ export function ScanLabelPage() {
 
         <aside className={styles.resultCard}>
           <h2>Resultado</h2>
-          {!contact && <p className={styles.pending}>Aún no hay datos desencriptados.</p>}
+          {!contact && (
+            <p className={styles.pending}>Aún no hay datos desencriptados.</p>
+          )}
 
           {contact && (
             <dl className={styles.contactList}>
-              <div>
-                <dt>Nombre</dt>
-                <dd>{contact.nombre}</dd>
-              </div>
+              {contact.nombre && (
+                <div>
+                  <dt>Nombre</dt>
+                  <dd>{contact.nombre}</dd>
+                </div>
+              )}
               <div>
                 <dt>Teléfono</dt>
                 <dd>
-                  <a href={`tel:${contact.telefono}`} className={styles.phoneLink}>
+                  <a
+                    href={`tel:${contact.telefono}`}
+                    className={styles.phoneLink}
+                  >
                     {formattedPhone}
                   </a>
                 </dd>

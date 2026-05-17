@@ -60,8 +60,8 @@ export function GenerateLabelPage() {
     setQrSrc("");
     setQrValue("");
 
-    if (!nombre.trim() || !placa.trim() || !isPhoneValid) {
-      setMessage("Completa nombre, placa y un teléfono válido de 10 dígitos.");
+    if (!placa.trim() || !isPhoneValid) {
+      setMessage("Completa placa y un teléfono válido de 10 dígitos.");
       setMessageKind("error");
       setGenerated(false);
       return;
