@@ -1,50 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
-import styles from './PlaceholderPage.module.css';
+import { useEffect, useState } from "react";
+import { AppError } from "../../../shared/errors/AppError";
+import { createCompactEncryptedQrValue } from "../../../infrastructure/crypto/webCryptoEncryption";
+import { loadEncryptionKey } from "../../settings/use-cases/loadEncryptionKey";
+import styles from "./PlaceholderPage.module.css";
 
-type CountryCode = '+52' | '+1';
+type CountryCode = "+52" | "+1";
 
 export function GenerateLabelPage() {
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [placa, setPlaca] = useState('');
-  const [countryCode, setCountryCode] = useState<CountryCode>('+52');
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [placa, setPlaca] = useState("");
+  const [countryCode, setCountryCode] = useState<CountryCode>("+52");
   const [generated, setGenerated] = useState(false);
-  const [qrSrc, setQrSrc] = useState('');
-
-  const phoneDigits = telefono.replace(/\D/g, '').slice(0, 10);
-  const isPhoneValid = phoneDigits.length === 10;
-  const fullPhone = `${countryCode}${phoneDigits}`;
-
-  const payload = useMemo(
-    () => JSON.stringify({ nombre: nombre.trim(), telefono: fullPhone }, null, 2),
-    [nombre, fullPhone],
+  const [qrSrc, setQrSrc] = useState("");
+  const [qrValue, setQrValue] = useState("");
+  const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"idle" | "error" | "success">(
+    "idle",
   );
 
-  const qrData = useMemo(() => {
-    const compact = btoa(unescape(encodeURIComponent(payload))).replace(/=/g, '');
-    return `v1.${compact}`;
-  }, [payload]);
-
-
+  const phoneDigits = telefono.replace(/\D/g, "").slice(0, 10);
+  const isPhoneValid = phoneDigits.length === 10;
+  const fullPhone = `${countryCode}${phoneDigits}`;
 
   useEffect(() => {
     let cancelled = false;
 
     async function buildQr() {
-      if (!generated) {
-        setQrSrc('');
+      if (!generated || !qrValue) {
+        setQrSrc("");
         return;
       }
 
       try {
-        const encoded = encodeURIComponent(qrData);
+        const encoded = encodeURIComponent(qrValue);
         const url = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&format=png&data=${encoded}`;
         if (!cancelled) {
           setQrSrc(url);
         }
       } catch {
         if (!cancelled) {
-          setQrSrc('');
+          setQrSrc("");
         }
       }
     }
@@ -54,15 +50,54 @@ export function GenerateLabelPage() {
     return () => {
       cancelled = true;
     };
-  }, [generated, qrData]);
+  }, [generated, qrValue]);
 
-  const handleGenerate = (event: React.FormEvent) => {
+  const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
+    setMessage("");
+    setMessageKind("idle");
+    setGenerated(false);
+    setQrSrc("");
+    setQrValue("");
+
     if (!nombre.trim() || !placa.trim() || !isPhoneValid) {
+      setMessage("Completa nombre, placa y un teléfono válido de 10 dígitos.");
+      setMessageKind("error");
       setGenerated(false);
       return;
     }
-    setGenerated(true);
+
+    try {
+      const encryptionKey = await loadEncryptionKey();
+      if (!encryptionKey) {
+        throw new AppError(
+          "KEY_NOT_FOUND",
+          "No hay llave configurada. Define una en Settings.",
+        );
+      }
+
+      const contactPayload = JSON.stringify({
+        nombre: nombre.trim(),
+        telefono: fullPhone,
+      });
+      const encryptedQrValue = await createCompactEncryptedQrValue(
+        contactPayload,
+        encryptionKey,
+      );
+
+      setQrValue(encryptedQrValue);
+      setGenerated(true);
+      setMessage("QR encriptado generado correctamente.");
+      setMessageKind("success");
+    } catch (error) {
+      setGenerated(false);
+      if (error instanceof AppError) {
+        setMessage(error.message);
+      } else {
+        setMessage("No fue posible generar el QR encriptado.");
+      }
+      setMessageKind("error");
+    }
   };
 
   return (
@@ -74,8 +109,9 @@ export function GenerateLabelPage() {
             <p className={styles.kicker}>IBPA · Contact Label</p>
             <h1>Generar QR</h1>
             <p>
-              Captura nombre, teléfono y placa para construir la etiqueta. El QR se
-              prepara con información de contacto y la placa queda visible en texto plano.
+              Captura nombre, teléfono y placa para construir la etiqueta. El QR
+              se prepara con información de contacto y la placa queda visible en
+              texto plano.
             </p>
           </header>
 
@@ -97,8 +133,10 @@ export function GenerateLabelPage() {
                 <span>País</span>
                 <button
                   type="button"
-                  className={`${styles.switch} ${countryCode === '+1' ? styles.switchUs : ''}`}
-                  onClick={() => setCountryCode((prev) => (prev === '+52' ? '+1' : '+52'))}
+                  className={`${styles.switch} ${countryCode === "+1" ? styles.switchUs : ""}`}
+                  onClick={() =>
+                    setCountryCode((prev) => (prev === "+52" ? "+1" : "+52"))
+                  }
                   aria-label="Cambiar país"
                 >
                   <span className={styles.switchThumb} />
@@ -114,7 +152,6 @@ export function GenerateLabelPage() {
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej. Juan Pérez"
-                required
               />
             </label>
 
@@ -129,11 +166,25 @@ export function GenerateLabelPage() {
             </label>
 
             <div className={styles.actions}>
-              <button className={styles.generateBtn} type="submit">Generar vista previa</button>
+              <button className={styles.generateBtn} type="submit">
+                Generar vista previa
+              </button>
               <p className={styles.helper}>
                 Teléfono final: <strong>{fullPhone}</strong>
               </p>
             </div>
+            {message && (
+              <p
+                className={
+                  messageKind === "error"
+                    ? styles.errorMessage
+                    : styles.successMessage
+                }
+                role="status"
+              >
+                {message}
+              </p>
+            )}
           </form>
         </article>
 
@@ -142,21 +193,27 @@ export function GenerateLabelPage() {
           <div className={styles.printLabel}>
             <div className={styles.qrBox} aria-label="Código QR generado">
               {generated && qrSrc ? (
-                <img src={qrSrc} alt="Código QR de contacto encriptado" className={styles.qrImage} />
+                <img
+                  src={qrSrc}
+                  alt="Código QR de contacto encriptado"
+                  className={styles.qrImage}
+                />
               ) : (
                 <div className={styles.qrPattern} />
               )}
             </div>
 
             <div className={styles.info}>
-              <h2>{placa || 'PLACA-000'}</h2>
+              <h2>{placa || "PLACA-000"}</h2>
             </div>
           </div>
 
           {generated ? (
-            <pre className={styles.payload}>{qrData}</pre>
+            <pre className={styles.payload}>{qrValue}</pre>
           ) : (
-            <p className={styles.pending}>Completa los datos para generar el contenido del QR.</p>
+            <p className={styles.pending}>
+              Completa los datos para generar el contenido del QR.
+            </p>
           )}
         </aside>
       </section>
