@@ -3,6 +3,7 @@ import { loadEncryptionKey } from "../use-cases/loadEncryptionKey";
 import { saveEncryptionKey } from "../use-cases/saveEncryptionKey";
 import { updateEncryptionKey } from "../use-cases/updateEncryptionKey";
 import { AppError } from "../../../shared/errors/AppError";
+import { usePwaInstall } from "../../../shared/hooks/usePwaInstall";
 import styles from "./SettingsPage.module.css";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -80,6 +81,8 @@ export function SettingsPage() {
   const cancelWarning = () => {
     setShowWarning(false);
   };
+
+  const { canInstall, isInstalled, install } = usePwaInstall();
 
   return (
     <main className={styles.page}>
@@ -243,6 +246,36 @@ export function SettingsPage() {
             </button>
           )}
         </form>
+
+        <section
+          className={styles.installSection}
+          aria-label="Instalar aplicación"
+        >
+          <h2 className={styles.infoTitle}>📲 Instalar aplicación</h2>
+          <p className={styles.installDescription}>
+            Instala la aplicación en tu dispositivo para usarla sin conexión a
+            internet en cualquier momento.
+          </p>
+          {isInstalled ? (
+            <div className={styles.installedBadge} role="status">
+              <span className={styles.dot} aria-hidden="true" />
+              Aplicación instalada
+            </div>
+          ) : canInstall ? (
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnInstall}`}
+              onClick={install}
+            >
+              📲 Instalar aplicación
+            </button>
+          ) : (
+            <p className={styles.installUnavailable}>
+              La instalación no está disponible en este navegador o la
+              aplicación ya fue instalada.
+            </p>
+          )}
+        </section>
 
         <section
           className={styles.infoSection}
