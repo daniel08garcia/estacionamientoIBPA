@@ -152,7 +152,7 @@ export function SettingsPage() {
               </button>
             </div>
             <p id="keyHelp" className={styles.hint}>
-              Usa una llave larga y única. No se enviará a ningún servidor.
+              Usa una llave larga y única. No se enviará a ningún servidor..
             </p>
           </div>
 
