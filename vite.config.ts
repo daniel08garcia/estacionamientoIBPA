@@ -3,7 +3,15 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
+const repoNameFromRepoSlug = process.env.GITHUB_REPOSITORY?.split('/')[1];
+const basePath = process.env.VITE_BASE_PATH
+  ? process.env.VITE_BASE_PATH
+  : repoNameFromRepoSlug
+    ? `/${repoNameFromRepoSlug}/`
+    : '/';
+
 export default defineConfig({
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
@@ -17,7 +25,8 @@ export default defineConfig({
         theme_color: '#6366f1',
         background_color: '#f8fafc',
         display: 'standalone',
-        start_url: '/',
+        start_url: basePath,
+        scope: basePath,
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -44,4 +53,3 @@ export default defineConfig({
     }),
   ],
 });
-
