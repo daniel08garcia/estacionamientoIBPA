@@ -182,15 +182,13 @@ export function ScanLabelPage() {
               </button>
             </div>
 
-            {isCameraActive && (
-              <video
-                ref={videoRef}
-                className={styles.preview}
-                muted
-                playsInline
-                aria-label="Vista previa de cámara"
-              />
-            )}
+            <video
+              ref={videoRef}
+              className={isCameraActive ? styles.preview : styles.previewHidden}
+              muted
+              playsInline
+              aria-label="Vista previa de cámara"
+            />
 
             {message && (
               <p
