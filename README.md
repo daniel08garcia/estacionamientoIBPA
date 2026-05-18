@@ -21,7 +21,7 @@ En GitHub, abre **Settings → Pages** y en **Build and deployment** selecciona:
 
 La app quedará publicada en:
 
-`https://<tu-usuario>.github.io/estacionamientoIBPA/`
+`https://<tu-usuario>.github.io/<nombre-repositorio>/`
 
 ## Desarrollo local
 

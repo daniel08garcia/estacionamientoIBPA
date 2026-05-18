@@ -3,9 +3,12 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
-const repoName = 'estacionamientoIBPA';
-const basePath =
-  process.env.GITHUB_ACTIONS === 'true' ? `/${repoName}/` : '/';
+const repoNameFromRepoSlug = process.env.GITHUB_REPOSITORY?.split('/')[1];
+const basePath = process.env.VITE_BASE_PATH
+  ? process.env.VITE_BASE_PATH
+  : repoNameFromRepoSlug
+    ? `/${repoNameFromRepoSlug}/`
+    : '/';
 
 export default defineConfig({
   base: basePath,
