@@ -18,12 +18,10 @@ type DetectorWithFormats = {
 };
 
 export function ScanLabelPage() {
-  const [rawValue, setRawValue] = useState("");
   const [status, setStatus] = useState<ReadStatus>("idle");
   const [message, setMessage] = useState("");
   const [contact, setContact] = useState<ScannedContact | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const [isReading, setIsReading] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scanRafRef = useRef<number | null>(null);
@@ -33,14 +31,13 @@ export function ScanLabelPage() {
     [contact],
   );
 
-  const handleRead = async (candidate?: string) => {
+  const handleRead = async (candidate: string) => {
     setStatus("idle");
     setMessage("");
     setContact(null);
-    setIsReading(true);
 
     try {
-      const parsedContact = await readScannedContact(candidate ?? rawValue);
+      const parsedContact = await readScannedContact(candidate);
       setContact(parsedContact);
       setStatus("success");
     } catch (error) {
@@ -50,8 +47,6 @@ export function ScanLabelPage() {
       } else {
         setMessage("No fue posible leer el código QR. Intenta nuevamente.");
       }
-    } finally {
-      setIsReading(false);
     }
   };
 
@@ -97,7 +92,6 @@ export function ScanLabelPage() {
             .find((item: { rawValue?: string }) => item.rawValue)
             ?.rawValue?.trim();
           if (qrValue) {
-            setRawValue(qrValue);
             await handleRead(qrValue);
             stopCamera();
             return;
@@ -134,41 +128,16 @@ export function ScanLabelPage() {
             <p className={styles.kicker}>IBPA · Scan Label</p>
             <h1>Leer QR</h1>
             <p>
-              Escanea o pega el contenido del QR para desencriptar el contacto y
+              Apunta la cámara al código QR para desencriptar el contacto y
               mostrarlo de forma clara y accionable.
             </p>
           </header>
 
           <div className={styles.readerCard}>
-            <label htmlFor="qrRawValue" className={styles.label}>
-              Contenido del QR
-            </label>
-            <textarea
-              id="qrRawValue"
-              className={styles.input}
-              placeholder="v1.xxxxxxxxx"
-              value={rawValue}
-              onChange={(event) => {
-                setRawValue(event.target.value);
-                setStatus("idle");
-                setMessage("");
-              }}
-              rows={4}
-            />
-
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.primaryBtn}
-                onClick={() => {
-                  void handleRead();
-                }}
-              >
-                {isReading ? "Leyendo..." : "Leer información"}
-              </button>
-              <button
-                type="button"
-                className={styles.secondaryBtn}
                 onClick={() => {
                   if (isCameraActive) {
                     stopCamera();
@@ -178,7 +147,7 @@ export function ScanLabelPage() {
                   void startCamera();
                 }}
               >
-                {isCameraActive ? "Detener cámara" : "Abrir cámara"}
+                {isCameraActive ? "Detener cámara" : "Escanear QR"}
               </button>
             </div>
 
