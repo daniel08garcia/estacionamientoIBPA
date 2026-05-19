@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppError } from "../../../shared/errors/AppError";
 import { createCompactEncryptedQrValue } from "../../../infrastructure/crypto/webCryptoEncryption";
 import { loadEncryptionKey } from "../../settings/use-cases/loadEncryptionKey";
@@ -16,9 +16,6 @@ export function GenerateLabelPage() {
   const [telefono, setTelefono] = useState("");
   const [placa, setPlaca] = useState("");
   const [countryCode, setCountryCode] = useState<CountryCode>("+52");
-  const [generated, setGenerated] = useState(false);
-  const [qrSrc, setQrSrc] = useState("");
-  const [qrValue, setQrValue] = useState("");
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"idle" | "error" | "success">(
     "idle",
@@ -28,46 +25,13 @@ export function GenerateLabelPage() {
   const isPhoneValid = phoneDigits.length === 10;
   const fullPhone = `${countryCode}${phoneDigits}`;
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function buildQr() {
-      if (!generated || !qrValue) {
-        setQrSrc("");
-        return;
-      }
-
-      try {
-        const encoded = encodeURIComponent(qrValue);
-        const url = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&format=png&data=${encoded}`;
-        if (!cancelled) {
-          setQrSrc(url);
-        }
-      } catch {
-        if (!cancelled) {
-          setQrSrc("");
-        }
-      }
-    }
-
-    void buildQr();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [generated, qrValue]);
-
   const generateEncryptedQr = async () => {
     setMessage("");
     setMessageKind("idle");
-    setGenerated(false);
-    setQrSrc("");
-    setQrValue("");
 
     if (!placa.trim() || !isPhoneValid) {
       setMessage("Completa placa y un teléfono válido de 10 dígitos.");
       setMessageKind("error");
-      setGenerated(false);
       return null;
     }
 
@@ -91,14 +55,8 @@ export function GenerateLabelPage() {
       const encoded = encodeURIComponent(encryptedQrValue);
       const generatedQrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${QR_IMAGE_SIZE}x${QR_IMAGE_SIZE}&format=png&data=${encoded}`;
 
-      setQrValue(encryptedQrValue);
-      setQrSrc(generatedQrSrc);
-      setGenerated(true);
-      setMessage("QR encriptado generado correctamente.");
-      setMessageKind("success");
-      return { qrValue: encryptedQrValue, qrSrc: generatedQrSrc };
+      return { qrSrc: generatedQrSrc };
     } catch (error) {
-      setGenerated(false);
       if (error instanceof AppError) {
         setMessage(error.message);
       } else {
@@ -109,18 +67,10 @@ export function GenerateLabelPage() {
     }
   };
 
-  const handleGenerate = async (event: React.FormEvent) => {
-    event.preventDefault();
-    await generateEncryptedQr();
-  };
-
   const handlePrint = async () => {
-    let printableQrSrc = qrSrc;
-    if (!generated || !printableQrSrc) {
-      const generatedData = await generateEncryptedQr();
-      if (!generatedData) return;
-      printableQrSrc = generatedData.qrSrc;
-    }
+    const generatedData = await generateEncryptedQr();
+    if (!generatedData) return;
+    const printableQrSrc = generatedData.qrSrc;
 
     const W = Math.round(LABEL_WIDTH_IN * LABEL_DPI); // 900 px
     const H = Math.round(LABEL_HEIGHT_IN * LABEL_DPI); // 600 px
@@ -249,7 +199,13 @@ export function GenerateLabelPage() {
             <p>Captura nombre, teléfono y placa para construir la etiqueta.</p>
           </header>
 
-          <form className={styles.form} onSubmit={handleGenerate}>
+          <form
+            className={styles.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handlePrint();
+            }}
+          >
             <div className={styles.row}>
               <label className={styles.field}>
                 <span>Teléfono (10 dígitos)</span>
@@ -300,18 +256,9 @@ export function GenerateLabelPage() {
             </label>
 
             <div className={styles.actions}>
-              <div className={styles.actionButtons}>
-                <button className={styles.generateBtn} type="submit">
-                  Generar vista previa
-                </button>
-                <button
-                  type="button"
-                  className={styles.printBtn}
-                  onClick={handlePrint}
-                >
-                  Imprimir etiqueta
-                </button>
-              </div>
+              <button className={styles.generateBtn} type="submit">
+                Imprimir etiqueta
+              </button>
               <p className={styles.helper}>
                 Teléfono final: <strong>{fullPhone}</strong>
               </p>
@@ -330,35 +277,6 @@ export function GenerateLabelPage() {
             )}
           </form>
         </article>
-
-        <aside className={styles.previewCard}>
-          <p className={styles.previewLabel}>Vista previa · 2x3 in</p>
-          <div className={styles.printLabel}>
-            <div className={styles.qrBox} aria-label="Código QR generado">
-              {generated && qrSrc ? (
-                <img
-                  src={qrSrc}
-                  alt="Código QR de contacto encriptado"
-                  className={styles.qrImage}
-                />
-              ) : (
-                <div className={styles.qrPattern} />
-              )}
-            </div>
-
-            <div className={styles.info}>
-              <h2>{placa || "PLACA-000"}</h2>
-            </div>
-          </div>
-
-          {generated ? (
-            <pre className={styles.payload}>{qrValue}</pre>
-          ) : (
-            <p className={styles.pending}>
-              Completa los datos para generar el contenido del QR.
-            </p>
-          )}
-        </aside>
       </section>
     </main>
   );
